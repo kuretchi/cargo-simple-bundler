@@ -1,0 +1,23 @@
+[package]
+name = "cargo-simple-bundler"
+version = "0.0.0"
+authors = ["kuretchi"]
+edition = "2018"
+license = "MIT OR Apache-2.0"
+description = "Packs only necessary modules of the crate into a single file automatically."
+repository = "https://github.com/kuretchi/cargo-simple-bundler"
+readme = "README.md"
+
+[dependencies]
+anyhow = "1.0.33"
+cargo_metadata = "0.12.0"
+either = "1.6.1"
+env_logger = "0.8.1"
+itertools = "0.9.0"
+log = "0.4.11"
+# see https://github.com/alexcrichton/proc-macro2/issues/242
+proc-macro2 = { version = "=1.0.13", features = ["span-locations"] }
+smallvec = "1.4.2"
+string-interner = "0.12.0"
+structopt = "0.3.20"
+syn = { version = "1.0.41", features = ["full", "visit", "extra-traits"] }
