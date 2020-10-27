@@ -6,7 +6,7 @@
 ## インストール
 
 ```
-cargo install --git https://github.com/kuretchi/cargo-simple-bundler
+cargo install --git https://github.com/kuretchi/cargo-simple-bundler --branch main
 ```
 
 ## 使い方
