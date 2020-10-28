@@ -23,7 +23,9 @@ where
         }
     }
     write!(writer, "mod {} ", cx.config.crate_ident)?;
-    inside_block(writer, |writer| do_concat_contents(&Path::default(), &inners, writer, cx))
+    inside_block(writer, |writer| do_concat_contents(&Path::default(), &inners, writer, cx))?;
+    writeln!(writer)?;
+    Ok(())
 }
 
 fn do_concat_contents<W>(
@@ -77,7 +79,6 @@ where
 {
     writeln!(writer, "{{")?;
     f(writer)?;
-    writeln!(writer)?;
-    writeln!(writer, "}}")?;
+    write!(writer, "}}")?;
     Ok(())
 }
