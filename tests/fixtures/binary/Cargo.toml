@@ -1,0 +1,8 @@
+[package]
+name = "binary"
+version = "0.0.0"
+authors = ["kuretchi"]
+edition = "2018"
+
+[dependencies]
+library = { path = "../library" }

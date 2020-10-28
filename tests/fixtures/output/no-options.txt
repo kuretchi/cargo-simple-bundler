@@ -1,0 +1,108 @@
+mod library {
+//! Logic circuits.
+pub mod adders {
+//! Adders.
+pub use self::full_adder::full_adder;
+pub use self::half_adder::*;
+mod full_adder {
+use super::half_adder;
+use crate::library::gates::or_gate;
+/// The full adder.
+pub fn full_adder(a: bool, b: bool, c: bool) -> (bool, bool) {
+    let (s, c1) = half_adder(a, b);
+    let (s, c2) = half_adder(s, c);
+    let c = or_gate(c1, c2);
+    (s, c)
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test() {
+        assert_eq!(full_adder(true, false, true), (false, true))
+    }
+}
+}
+mod half_adder {
+use crate::library::gates::{and_gate, xor_gate};
+/// The half adder.
+pub fn half_adder(a: bool, b: bool) -> (bool, bool) {
+    let s = xor_gate(a, b);
+    let c = and_gate(a, b);
+    (s, c)
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test() {
+        assert_eq!(half_adder(true, true), (false, true));
+    }
+}
+}
+}
+pub mod gates {
+//! Logic gates.
+pub use and::and_gate;
+pub use not::not_gate;
+pub use or::*;
+pub use xor::xor_gate;
+mod and {
+/// The AND gate.
+pub fn and_gate(a: bool, b: bool) -> bool {
+    a & b
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test() {
+        assert_eq!(and_gate(true, false), false);
+    }
+}
+}
+mod not {
+/// The NOT gate.
+pub fn not_gate(a: bool) -> bool {
+    !a
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test() {
+        assert_eq!(not_gate(true), false);
+    }
+}
+}
+mod or {
+/// The OR gate.
+pub fn or_gate(a: bool, b: bool) -> bool {
+    a | b
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test() {
+        assert_eq!(or_gate(true, false), true);
+    }
+}
+}
+mod xor {
+use super::{and_gate, not_gate, or_gate};
+/// The XOR gate.
+pub fn xor_gate(a: bool, b: bool) -> bool {
+    or_gate(and_gate(a, not_gate(b)), and_gate(not_gate(a), b))
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test() {
+        assert_eq!(xor_gate(true, false), true);
+    }
+}
+}
+}
+}
