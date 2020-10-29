@@ -12,7 +12,7 @@ fn actual_output(remove_doc_comments: bool, remove_test_modules: bool) -> String
     let config = Config {
         crate_ident: "library".to_owned(),
         crate_src_dir: Path::new(MANIFEST_DIR).join("tests/fixtures/library/src"),
-        entry_file_path: Some(Path::new(MANIFEST_DIR).join("tests/fixtures/binary/src/main.rs")),
+        entry_file_path: Some(Path::new(MANIFEST_DIR).join("tests/fixtures/entry_file.rs")),
         remove_doc_comments,
         remove_test_modules,
         indent_spaces: 4,
