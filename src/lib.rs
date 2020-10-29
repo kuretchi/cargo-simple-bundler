@@ -1,5 +1,6 @@
 mod common;
 mod concat;
+mod content;
 mod deps;
 mod file;
 mod path;
@@ -41,5 +42,7 @@ where
         }
         None => Deps::all(),
     };
-    concat_contents(&deps, writer, cx)
+    let content = concat_contents(&deps, cx)?;
+    write!(writer, "{}", content)?;
+    Ok(())
 }

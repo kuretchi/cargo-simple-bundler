@@ -1,5 +1,5 @@
-use crate::common::*;
-use std::{io::prelude::*, mem};
+use crate::{common::*, content::Content};
+use std::mem;
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Debug)]
 pub struct LineColumn {
@@ -24,19 +24,12 @@ impl From<proc_macro2::Span> for Span {
     }
 }
 
-pub fn replace_spanned_strs<W, I, F>(
-    content: &str,
-    replacers: I,
-    writer: &mut W,
-    cx: &mut Context,
-) -> Result<()>
+pub fn replace_spans<I>(content: &str, with: I, acc: &mut Content)
 where
-    W: ?Sized + Write,
-    F: FnOnce(&mut W, &mut Context) -> Result<()>,
-    I: IntoIterator<Item = (Span, Option<F>)>,
+    I: IntoIterator<Item = (Span, Option<Content>)>,
 {
-    let replacers = {
-        let mut vec = replacers.into_iter().collect_vec();
+    let with = {
+        let mut vec = with.into_iter().collect_vec();
         vec.sort_unstable_by_key(|&(span, _)| span);
         vec.into_iter().coalesce(|x, y| {
             if y.0.start <= x.0.end {
@@ -52,21 +45,19 @@ where
     let mut lines = (1..).zip(content.lines()).peekable();
     let mut start_col = 0;
 
-    for (span, f) in replacers {
+    for (span, s) in with {
         for (_, line) in lines.peeking_take_while(|&(i, _)| i != span.start.line) {
-            writeln!(writer, "{}", &line[mem::replace(&mut start_col, 0)..])?;
+            acc.push_line(&line[mem::replace(&mut start_col, 0)..]);
         }
         let &(_, start_line) = lines.peek().unwrap();
-        write!(writer, "{}", &start_line[..span.start.column])?;
-        if let Some(f) = f {
-            f(writer, cx)?;
+        acc.push(&start_line[..span.start.column]);
+        if let Some(s) = s {
+            acc.append(s);
         }
         lines.peeking_take_while(|&(i, _)| i != span.end.line).for_each(drop);
         start_col = span.end.column;
     }
     for (_, line) in lines {
-        writeln!(writer, "{}", &line[mem::replace(&mut start_col, 0)..])?;
+        acc.push_line(&line[mem::replace(&mut start_col, 0)..]);
     }
-
-    Ok(())
 }

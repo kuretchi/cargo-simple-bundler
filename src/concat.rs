@@ -1,17 +1,9 @@
-use crate::{common::*, deps::Deps, file::file, path::Path, span::replace_spanned_strs};
-use either::Either;
-use std::{
-    collections::{HashMap, HashSet},
-    io::prelude::*,
-    iter,
-};
+use crate::{common::*, content::Content, deps::Deps, file::file, path::Path, span::replace_spans};
+use std::collections::{HashMap, HashSet};
 
-pub fn concat_contents<W>(deps: &Deps, writer: &mut W, cx: &mut Context) -> Result<()>
-where
-    W: ?Sized + Write,
-{
+pub fn concat_contents(deps: &Deps, cx: &mut Context) -> Result<Content> {
     if deps.is_empty() {
-        return Ok(());
+        return Ok(Content::default());
     }
     let mut inners = HashMap::<_, HashSet<_>>::new();
     for path in deps.iter() {
@@ -22,63 +14,52 @@ where
             inner = next;
         }
     }
-    write!(writer, "mod {} ", cx.config.crate_ident)?;
-    inside_block(writer, |writer| do_concat_contents(&Path::default(), &inners, writer, cx))?;
-    writeln!(writer)?;
+    let mut acc = Content::from(format!("mod {} ", cx.config.crate_ident));
+    inside_block(&mut acc, |acc| do_concat_contents(&Path::default(), &inners, acc, cx))?;
+    acc.push_line("");
+    Ok(acc)
+}
+
+fn do_concat_contents(
+    path: &Path,
+    inners: &HashMap<Path, HashSet<Symbol>>,
+    acc: &mut Content,
+    cx: &mut Context,
+) -> Result<()> {
+    let file = file(path, cx)?;
+    let mut replace_with = vec![];
+
+    for child_module in file.child_modules() {
+        if inners.get(path).map_or(true, |x| x.contains(&child_module.symbol())) {
+            let path = child_module.path();
+            let mut acc = Content::default();
+            acc.push(" ");
+            inside_block(&mut acc, |acc| do_concat_contents(&path, inners, acc, cx))?;
+            replace_with.push((child_module.item_mod_semi_span(), Some(acc)));
+        } else {
+            replace_with.push((child_module.item_mod_span(), None));
+            if let Some(span) = child_module.item_use_span() {
+                replace_with.push((span, None));
+            }
+        }
+    }
+    replace_with.extend(file.crate_keyword_spans().map(|span| {
+        let s = format!("crate::{}", cx.config.crate_ident);
+        (span, Some(s.into()))
+    }));
+    replace_with.extend(file.doc_comment_spans().map(|span| (span, None)));
+    replace_with.extend(file.test_module_spans().map(|span| (span, None)));
+
+    replace_spans(file.content(), replace_with, acc);
     Ok(())
 }
 
-fn do_concat_contents<W>(
-    path: &Path,
-    inners: &HashMap<Path, HashSet<Symbol>>,
-    writer: &mut W,
-    cx: &mut Context,
-) -> Result<()>
+fn inside_block<F>(acc: &mut Content, f: F) -> Result<()>
 where
-    W: ?Sized + Write,
+    F: FnOnce(&mut Content) -> Result<()>,
 {
-    let file = file(&path, cx)?;
-
-    let modules_replacer = file.child_modules().flat_map(|child_module| {
-        if inners.get(path).map_or(true, |x| x.contains(&child_module.symbol())) {
-            let path = child_module.path();
-            let f = move |w: &mut W, cx: &mut _| {
-                write!(w, " ")?;
-                inside_block(w, |w| do_concat_contents(&path, inners, w, cx))
-            };
-            let f = Box::new(f) as Box<dyn (FnOnce(&mut _, &mut _) -> _)>;
-            Either::Left(iter::once((child_module.item_mod_semi_span(), Some(f))))
-        } else {
-            let spans =
-                iter::once(child_module.item_mod_span()).chain(child_module.item_use_span());
-            Either::Right(spans.map(move |span| (span, None)))
-        }
-    });
-    let crate_keywords_replacer = file.crate_keyword_spans().map(|span| {
-        let f = |w: &mut W, cx: &mut Context| {
-            write!(w, "crate::{}", cx.config.crate_ident)?;
-            Ok(())
-        };
-        let f = Box::new(f) as _;
-        (span, Some(f))
-    });
-    let doc_comments_remover = file.doc_comment_spans().map(|span| (span, None));
-    let test_modules_remover = file.test_module_spans().map(|span| (span, None));
-
-    let replacers = modules_replacer
-        .chain(crate_keywords_replacer)
-        .chain(doc_comments_remover)
-        .chain(test_modules_remover);
-    replace_spanned_strs(&file.content(), replacers, writer, cx)
-}
-
-fn inside_block<W, F>(writer: &mut W, f: F) -> Result<()>
-where
-    W: ?Sized + Write,
-    F: FnOnce(&mut W) -> Result<()>,
-{
-    writeln!(writer, "{{")?;
-    f(writer)?;
-    write!(writer, "}}")?;
+    acc.push_line("{");
+    f(acc)?;
+    acc.push("}");
     Ok(())
 }
