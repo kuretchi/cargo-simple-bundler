@@ -1,7 +1,27 @@
 use std::fmt;
 
+struct Line {
+    spaces: usize,
+    s: String,
+}
+
+impl From<String> for Line {
+    fn from(s: String) -> Self {
+        Line { spaces: 0, s }
+    }
+}
+
+impl fmt::Display for Line {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for _ in 0..self.spaces {
+            write!(f, " ")?;
+        }
+        write!(f, "{}", self.s)
+    }
+}
+
 pub struct Content {
-    lines: Vec<String>,
+    lines: Vec<Line>,
     new_line: bool,
 }
 
@@ -13,7 +33,7 @@ impl Default for Content {
 
 impl From<String> for Content {
     fn from(s: String) -> Self {
-        Content { lines: vec![s], new_line: false }
+        Content { lines: vec![Line::from(s)], new_line: false }
     }
 }
 
@@ -37,9 +57,9 @@ impl fmt::Display for Content {
 impl Content {
     fn push_inner(&mut self, s: &str) {
         if self.new_line {
-            self.lines.push(s.to_owned());
+            self.lines.push(Line::from(s.to_owned()));
         } else {
-            self.lines.last_mut().unwrap().push_str(s);
+            self.lines.last_mut().unwrap().s.push_str(s);
         }
     }
 
@@ -59,13 +79,20 @@ impl Content {
             if self.new_line {
                 self.lines.push(first);
             } else {
-                self.push_line(&first);
+                assert_eq!(first.spaces, 0);
+                self.push_line(&first.s);
             }
             for line in lines {
                 self.lines.push(line);
             }
         }
         self.new_line = other.new_line;
+    }
+
+    pub fn indent(&mut self, spaces: usize) {
+        for line in &mut self.lines {
+            line.spaces += spaces;
+        }
     }
 }
 
@@ -135,5 +162,18 @@ mod tests {
         s.append(t);
 
         assert_eq!(s.to_string(), "a\nb\n");
+    }
+
+    #[test]
+    fn indent() {
+        let mut s = Content::default();
+        s.push_line("a");
+        let mut t = Content::default();
+        t.push_line("b");
+        t.indent(2);
+        s.append(t);
+        s.push_line("c");
+
+        assert_eq!(s.to_string(), "a\n  b\nc\n");
     }
 }

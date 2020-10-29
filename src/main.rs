@@ -28,6 +28,12 @@ enum Opt {
             help = "Specify the path to the entry file to enable dependency analysis"
         )]
         entry_file_path: Option<PathBuf>,
+        #[structopt(
+            long,
+            name = "NUM",
+            help = "Enable indentation with the specified number of spaces"
+        )]
+        indent_spaces: Option<usize>,
     },
 }
 
@@ -40,6 +46,7 @@ fn main() -> Result<()> {
         remove_test_modules,
         remove_doc_comments,
         entry_file_path,
+        indent_spaces,
     } = Opt::from_args();
 
     let config = {
@@ -66,6 +73,7 @@ fn main() -> Result<()> {
             entry_file_path,
             remove_test_modules,
             remove_doc_comments,
+            indent_spaces: indent_spaces.unwrap_or(0),
         }
     };
 

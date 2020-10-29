@@ -15,7 +15,9 @@ pub fn concat_contents(deps: &Deps, cx: &mut Context) -> Result<Content> {
         }
     }
     let mut acc = Content::from(format!("mod {} ", cx.config.crate_ident));
-    inside_block(&mut acc, |acc| do_concat_contents(&Path::default(), &inners, acc, cx))?;
+    inside_block(&mut acc, cx.config.indent_spaces, |acc| {
+        do_concat_contents(&Path::default(), &inners, acc, cx)
+    })?;
     acc.push_line("");
     Ok(acc)
 }
@@ -34,7 +36,9 @@ fn do_concat_contents(
             let path = child_module.path();
             let mut acc = Content::default();
             acc.push(" ");
-            inside_block(&mut acc, |acc| do_concat_contents(&path, inners, acc, cx))?;
+            inside_block(&mut acc, cx.config.indent_spaces, |acc| {
+                do_concat_contents(&path, inners, acc, cx)
+            })?;
             replace_with.push((child_module.item_mod_semi_span(), Some(acc)));
         } else {
             replace_with.push((child_module.item_mod_span(), None));
@@ -54,12 +58,16 @@ fn do_concat_contents(
     Ok(())
 }
 
-fn inside_block<F>(acc: &mut Content, f: F) -> Result<()>
+fn inside_block<F>(acc: &mut Content, indent_spaces: usize, f: F) -> Result<()>
 where
     F: FnOnce(&mut Content) -> Result<()>,
 {
+    let mut s = Content::default();
+    f(&mut s)?;
+    s.indent(indent_spaces);
+
     acc.push_line("{");
-    f(acc)?;
+    acc.append(s);
     acc.push("}");
     Ok(())
 }

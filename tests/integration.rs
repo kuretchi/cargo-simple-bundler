@@ -15,6 +15,7 @@ fn actual_output(remove_doc_comments: bool, remove_test_modules: bool) -> String
         entry_file_path: Some(Path::new(MANIFEST_DIR).join("tests/fixtures/binary/src/main.rs")),
         remove_doc_comments,
         remove_test_modules,
+        indent_spaces: 4,
     };
     let mut buf = vec![];
     bundle(config, &mut buf).unwrap();
@@ -22,7 +23,7 @@ fn actual_output(remove_doc_comments: bool, remove_test_modules: bool) -> String
 }
 
 fn remove_empty_lines(s: &str) -> String {
-    s.lines().filter(|line| !line.is_empty()).fold(String::new(), |mut acc, line| {
+    s.lines().filter(|line| !line.trim_start().is_empty()).fold(String::new(), |mut acc, line| {
         acc.push_str(line);
         acc.push('\n');
         acc

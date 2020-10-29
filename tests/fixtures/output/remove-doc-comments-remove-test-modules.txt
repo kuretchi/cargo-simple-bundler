@@ -1,51 +1,51 @@
 mod library {
-pub mod adders {
-pub use self::full_adder::full_adder;
-pub use self::half_adder::*;
-mod full_adder {
-use super::half_adder;
-use crate::library::gates::or_gate;
-pub fn full_adder(a: bool, b: bool, c: bool) -> (bool, bool) {
-    let (s, c1) = half_adder(a, b);
-    let (s, c2) = half_adder(s, c);
-    let c = or_gate(c1, c2);
-    (s, c)
-}
-}
-mod half_adder {
-use crate::library::gates::{and_gate, xor_gate};
-pub fn half_adder(a: bool, b: bool) -> (bool, bool) {
-    let s = xor_gate(a, b);
-    let c = and_gate(a, b);
-    (s, c)
-}
-}
-}
-pub mod gates {
-pub use and::and_gate;
-pub use not::not_gate;
-pub use or::*;
-pub use xor::xor_gate;
-mod and {
-pub fn and_gate(a: bool, b: bool) -> bool {
-    a & b
-}
-}
-mod not {
-pub fn not_gate(a: bool) -> bool {
-    !a
-}
-}
-mod or {
-pub fn or_gate(a: bool, b: bool) -> bool {
-    a | b
-}
-}
-mod xor {
-use super::{and_gate, not_gate, or_gate};
-pub fn xor_gate(a: bool, b: bool) -> bool {
-    or_gate(and_gate(a, not_gate(b)), and_gate(not_gate(a), b))
-}
-}
-}
+    pub mod adders {
+        pub use self::full_adder::full_adder;
+        pub use self::half_adder::*;
+        mod full_adder {
+            use super::half_adder;
+            use crate::library::gates::or_gate;
+            pub fn full_adder(a: bool, b: bool, c: bool) -> (bool, bool) {
+                let (s, c1) = half_adder(a, b);
+                let (s, c2) = half_adder(s, c);
+                let c = or_gate(c1, c2);
+                (s, c)
+            }
+        }
+        mod half_adder {
+            use crate::library::gates::{and_gate, xor_gate};
+            pub fn half_adder(a: bool, b: bool) -> (bool, bool) {
+                let s = xor_gate(a, b);
+                let c = and_gate(a, b);
+                (s, c)
+            }
+        }
+    }
+    pub mod gates {
+        pub use and::and_gate;
+        pub use not::not_gate;
+        pub use or::*;
+        pub use xor::xor_gate;
+        mod and {
+            pub fn and_gate(a: bool, b: bool) -> bool {
+                a & b
+            }
+        }
+        mod not {
+            pub fn not_gate(a: bool) -> bool {
+                !a
+            }
+        }
+        mod or {
+            pub fn or_gate(a: bool, b: bool) -> bool {
+                a | b
+            }
+        }
+        mod xor {
+            use super::{and_gate, not_gate, or_gate};
+            pub fn xor_gate(a: bool, b: bool) -> bool {
+                or_gate(and_gate(a, not_gate(b)), and_gate(not_gate(a), b))
+            }
+        }
+    }
 }
