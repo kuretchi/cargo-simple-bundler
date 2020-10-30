@@ -1,6 +1,6 @@
 use crate::common::*;
 use smallvec::SmallVec;
-use std::{collections::HashSet, fmt};
+use std::{collections::HashSet, fmt, iter};
 
 #[derive(Clone, Default, PartialEq, Eq, Hash)]
 pub struct Path(SmallVec<[Symbol; 4]>);
@@ -47,5 +47,9 @@ impl Path {
         let mut this = self.clone();
         this.0.push(symbol);
         this
+    }
+
+    pub fn ancestors(&self) -> impl Iterator<Item = Self> {
+        iter::successors(Some(self.clone()), Self::parent)
     }
 }

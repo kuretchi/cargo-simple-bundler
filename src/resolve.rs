@@ -19,8 +19,10 @@ pub fn resolve_deps(mut deps: Deps, cx: &mut Context) -> Result<Deps> {
         log::debug!("resolved_deps = {:?}", with_context(&resolved_deps, cx));
         for path in resolved_deps {
             if final_deps.insert(path.clone()) {
-                let file = file(&path, cx)?;
-                deps.extend(file.deps().iter().cloned());
+                for path in path.ancestors() {
+                    let file = file(&path, cx)?;
+                    deps.extend(file.deps().iter().cloned());
+                }
             }
         }
     }
