@@ -282,6 +282,14 @@ impl Visit<'_> for Visitor2<'_> {
         collect_crate_keyword_spans(&item_use.tree, &mut self.file.crate_keyword_spans);
         visit::visit_item_use(self, item_use);
     }
+
+    fn visit_item_macro(&mut self, item_macro: &syn::ItemMacro) {
+        collect_dollar_crate_keyword_spans(
+            item_macro.mac.tokens.clone(),
+            &mut self.file.crate_keyword_spans,
+        );
+        visit::visit_item_macro(self, item_macro);
+    }
 }
 
 fn collect_crate_keyword_spans(tree: &syn::UseTree, spans: &mut Vec<Span>) {
@@ -295,6 +303,27 @@ fn collect_crate_keyword_spans(tree: &syn::UseTree, spans: &mut Vec<Span>) {
             }
         }
         _ => {}
+    }
+}
+
+fn collect_dollar_crate_keyword_spans(tokens: proc_macro2::TokenStream, spans: &mut Vec<Span>) {
+    let iter = tokens.clone().into_iter().tuple_windows().filter_map(|(token0, token1)| {
+        match (token0, token1) {
+            (proc_macro2::TokenTree::Punct(punct), proc_macro2::TokenTree::Ident(ident))
+                if punct.as_char() == '$' && ident == "crate" =>
+            {
+                Some(Span::from(ident.span()))
+            }
+            _ => None,
+        }
+    });
+    spans.extend(iter);
+
+    for group in tokens.into_iter().filter_map(|token| match token {
+        proc_macro2::TokenTree::Group(group) => Some(group),
+        _ => None,
+    }) {
+        collect_dollar_crate_keyword_spans(group.stream(), spans);
     }
 }
 
