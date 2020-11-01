@@ -307,17 +307,30 @@ fn collect_crate_keyword_spans(tree: &syn::UseTree, spans: &mut Vec<Span>) {
 }
 
 fn collect_dollar_crate_keyword_spans(tokens: proc_macro2::TokenStream, spans: &mut Vec<Span>) {
-    let iter = tokens.clone().into_iter().tuple_windows().filter_map(|(token0, token1)| {
-        match (token0, token1) {
+    let mut iter = itertools::multipeek(tokens.clone().into_iter().tuple_windows());
+    while let Some((token0, token1)) = iter.next() {
+        let span = match (token0, token1) {
             (proc_macro2::TokenTree::Punct(punct), proc_macro2::TokenTree::Ident(ident))
                 if punct.as_char() == '$' && ident == "crate" =>
             {
-                Some(Span::from(ident.span()))
+                ident.span().into()
             }
-            _ => None,
+            _ => continue,
+        };
+        // skip `$crate::ident!`
+        match (iter.peek().cloned(), iter.peek().cloned(), iter.peek().cloned(), iter.peek()) {
+            (
+                Some((_, proc_macro2::TokenTree::Punct(punct0))),
+                Some((_, proc_macro2::TokenTree::Punct(punct1))),
+                Some((_, proc_macro2::TokenTree::Ident(_))),
+                Some((_, proc_macro2::TokenTree::Punct(punct2))),
+            ) if punct0.as_char() == ':' && punct1.as_char() == ':' && punct2.as_char() == '!' => {
+                continue;
+            }
+            _ => {}
         }
-    });
-    spans.extend(iter);
+        spans.push(span);
+    }
 
     for group in tokens.into_iter().filter_map(|token| match token {
         proc_macro2::TokenTree::Group(group) => Some(group),
