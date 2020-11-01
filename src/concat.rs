@@ -6,7 +6,9 @@ pub fn concat_contents(deps: &Deps, cx: &mut Context) -> Result<Content> {
         return Ok(Content::default());
     }
     let mut inners = HashMap::<_, HashSet<_>>::new();
-    for path in deps.iter() {
+    for path in
+        deps.iter().filter(|path| path.strict_ancestors().all(|ancestor| !deps.contains(&ancestor)))
+    {
         let mut inner = Path::default();
         for symbol in path.iter() {
             let next = inner.child(symbol);

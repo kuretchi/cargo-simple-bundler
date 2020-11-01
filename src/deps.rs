@@ -23,6 +23,10 @@ impl Deps {
         self.0.is_empty()
     }
 
+    pub fn contains(&self, path: &Path) -> bool {
+        self.0.contains(path)
+    }
+
     pub fn iter(&self) -> impl Iterator<Item = &Path> {
         self.0.iter()
     }
