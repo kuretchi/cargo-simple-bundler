@@ -19,15 +19,25 @@ pub fn resolve_deps(mut deps: Deps, cx: &mut Context) -> Result<Deps> {
         log::debug!("resolved_deps = {:?}", with_context(&resolved_deps, cx));
         for path in resolved_deps {
             if final_deps.insert(path.clone()) {
-                for path in path.ancestors() {
+                for path in path.strict_ancestors() {
                     let file = file(&path, cx)?;
                     deps.extend(file.deps().iter().cloned());
                 }
+                collect_descendant_deps(&path, &mut deps, cx)?;
             }
         }
     }
 
     Ok(final_deps)
+}
+
+fn collect_descendant_deps(path: &Path, deps: &mut Deps, cx: &mut Context) -> Result<()> {
+    let file = file(path, cx)?;
+    deps.extend(file.deps().iter().cloned());
+    for path in file.child_modules().map(|child_module| path.child(child_module.symbol())) {
+        collect_descendant_deps(&path, deps, cx)?;
+    }
+    Ok(())
 }
 
 fn resolve_path(path: &Path, cx: &mut Context) -> Result<SmallVec<[Path; 2]>> {

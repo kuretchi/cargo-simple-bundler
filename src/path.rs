@@ -49,7 +49,7 @@ impl Path {
         this
     }
 
-    pub fn ancestors(&self) -> impl Iterator<Item = Self> {
-        iter::successors(Some(self.clone()), Self::parent)
+    pub fn strict_ancestors(&self) -> impl Iterator<Item = Self> {
+        iter::successors(self.parent(), Self::parent)
     }
 }
