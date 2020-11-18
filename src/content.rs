@@ -1,5 +1,6 @@
 use std::fmt;
 
+#[derive(Debug)]
 struct Line {
     spaces: usize,
     s: String,
@@ -20,6 +21,7 @@ impl fmt::Display for Line {
     }
 }
 
+#[derive(Debug)]
 pub struct Content {
     lines: Vec<Line>,
     new_line: bool,
