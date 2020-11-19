@@ -2,8 +2,9 @@ use crate::{
     common::*,
     deps::{collect_deps_from_use_tree, Deps},
     path::Path,
-    span::Span,
+    span::{LineColumn, Span, SpanUnion},
 };
+use quote::ToTokens as _;
 use std::{
     collections::{HashMap, HashSet},
     fmt, fs,
@@ -59,12 +60,8 @@ impl File<'_> {
         self.inner.crate_keyword_spans.iter().copied()
     }
 
-    pub fn doc_comment_spans(&self) -> impl Iterator<Item = Span> + '_ {
-        self.inner.doc_comment_spans.iter().copied()
-    }
-
-    pub fn test_module_spans(&self) -> impl Iterator<Item = Span> + '_ {
-        self.inner.test_module_spans.iter().copied()
+    pub fn target_spans(&self) -> &SpanUnion {
+        &self.inner.target_spans
     }
 }
 
@@ -75,8 +72,7 @@ pub struct FileInner {
     public_symbols: HashSet<Symbol>,
     child_modules: HashMap<Symbol, ChildModuleInner>,
     crate_keyword_spans: Vec<Span>,
-    doc_comment_spans: Vec<Span>,
-    test_module_spans: Vec<Span>,
+    target_spans: SpanUnion,
 }
 
 impl fmt::Debug for WithContext<'_, '_, FileInner> {
@@ -97,7 +93,15 @@ impl FileInner {
         let mut child_modules = child_modules(syn_file, cx);
         collect_reexports(syn_file, &mut child_modules, cx);
 
-        let mut file = FileInner { content, public_symbols, child_modules, ..FileInner::default() };
+        let target_spans = target_spans(&content, syn_file, cx);
+
+        let mut file = FileInner {
+            content,
+            public_symbols,
+            child_modules,
+            target_spans,
+            ..FileInner::default()
+        };
         Visitor1 { file: &mut file, path, cx }.visit_file(syn_file);
         Visitor2 { file: &mut file }.visit_file(syn_file);
 
@@ -220,6 +224,59 @@ fn do_collect_reexports(
     child_module.item_use_span = Some(item_use.span().into());
 }
 
+fn target_spans(content: &str, syn_file: &syn::File, cx: &mut Context) -> SpanUnion {
+    let mut token_spans = SpanUnion::default();
+    collect_token_spans(syn_file.to_token_stream(), &mut token_spans);
+
+    if cx.config.remove_comments {
+        return token_spans;
+    }
+
+    let mut joint_lines = token_spans
+        .iter()
+        .map(|Span { start, end }| (start.line, end.line))
+        .filter(|(start, end)| start != end)
+        .coalesce(|x, y| {
+            let (x_start, x_end) = x;
+            let (y_start, y_end) = y;
+            if x_end == y_start {
+                Ok((x_start, y_end))
+            } else {
+                Err((x, y))
+            }
+        })
+        .peekable();
+    let mut content_lines = (1..).zip(content.lines().map(str::len));
+    let mut target_spans = SpanUnion::default();
+
+    while let Some((line, column)) = content_lines.next() {
+        let end = match joint_lines.peeking_next(|&(x, _)| x == line) {
+            None => LineColumn { line, column },
+            Some((_, end_line)) => {
+                let (_, end_column) = content_lines.nth(end_line - line - 1).unwrap();
+                LineColumn { line: end_line, column: end_column }
+            }
+        };
+        let span = Span { start: LineColumn { line, column: 0 }, end };
+        target_spans.insert(span);
+    }
+
+    target_spans
+}
+
+fn collect_token_spans(tokens: proc_macro2::TokenStream, acc: &mut SpanUnion) {
+    for token in tokens {
+        match token {
+            proc_macro2::TokenTree::Group(group) => {
+                acc.insert(group.span_open().into());
+                collect_token_spans(group.stream(), acc);
+                acc.insert(group.span_close().into());
+            }
+            _ => acc.insert(token.span().into()),
+        }
+    }
+}
+
 struct Visitor1<'a> {
     file: &'a mut FileInner,
     path: &'a Path,
@@ -229,7 +286,7 @@ struct Visitor1<'a> {
 impl<'a> Visit<'_> for Visitor1<'a> {
     fn visit_attribute(&mut self, attr: &syn::Attribute) {
         if self.cx.config.remove_doc_comments && attr.path.is_ident("doc") {
-            self.file.doc_comment_spans.push(attr.span().into());
+            self.file.target_spans.remove(attr.span().into());
         }
         visit::visit_attribute(self, attr);
     }
@@ -252,7 +309,7 @@ impl<'a> Visit<'_> for Visitor1<'a> {
             if self.cx.config.remove_test_modules
                 && item_mod.attrs.iter().any(is_cfg_test_attribute)
             {
-                self.file.test_module_spans.push(item_mod.span().into());
+                self.file.target_spans.remove(item_mod.span().into());
             } else {
                 log::warn!("skip the inline module `{}`", item_mod.ident);
             }

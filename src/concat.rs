@@ -1,4 +1,4 @@
-use crate::{common::*, content::Content, deps::Deps, file::file, path::Path, span::replace_spans};
+use crate::{common::*, content::Content, deps::Deps, file::file, path::Path, span::take_spans};
 use std::collections::{HashMap, HashSet};
 
 pub fn concat_contents(deps: &Deps, cx: &mut Context) -> Result<Content> {
@@ -31,6 +31,7 @@ fn do_concat_contents(
     cx: &mut Context,
 ) -> Result<()> {
     let file = file(path, cx)?;
+    let mut target_spans = file.target_spans().clone();
     let mut replace_with = vec![];
 
     for child_module in file.child_modules() {
@@ -41,22 +42,47 @@ fn do_concat_contents(
             inside_block(&mut acc, cx.config.indent_spaces, |acc| {
                 do_concat_contents(&path, inners, acc, cx)
             })?;
-            replace_with.push((child_module.item_mod_semi_span(), Some(acc)));
+            replace_with.push((child_module.item_mod_semi_span(), acc));
         } else {
-            replace_with.push((child_module.item_mod_span(), None));
+            target_spans.remove(child_module.item_mod_span());
             if let Some(span) = child_module.item_use_span() {
-                replace_with.push((span, None));
+                target_spans.remove(span);
             }
         }
     }
     replace_with.extend(file.crate_keyword_spans().map(|span| {
         let s = format!("crate::{}", cx.config.crate_ident);
-        (span, Some(s.into()))
+        (span, s.into())
     }));
-    replace_with.extend(file.doc_comment_spans().map(|span| (span, None)));
-    replace_with.extend(file.test_module_spans().map(|span| (span, None)));
 
-    replace_spans(file.content(), replace_with, acc);
+    replace_with.sort_unstable_by_key(|&(span, _)| span);
+    let mut replace_with = replace_with.into_iter().peekable();
+
+    for chunk in take_spans(file.content(), &target_spans) {
+        for _ in 0..chunk.line_offset {
+            acc.push_line("");
+        }
+        for _ in 0..chunk.column_offset {
+            acc.push(" ");
+        }
+
+        replace_with
+            .peeking_take_while(|&(span, _)| span.start < chunk.span.start)
+            .inspect(|(span, _)| assert!(span.end <= chunk.span.start))
+            .for_each(drop);
+
+        let mut rest = chunk.content;
+        let mut offset = chunk.span.start.column;
+
+        for (span, s) in replace_with.peeking_take_while(|&(span, _)| span.start < chunk.span.end) {
+            assert!(span.end <= chunk.span.end);
+            acc.push(&rest[..span.start.column - offset]);
+            acc.append(s);
+            rest = &rest[span.end.column - offset..];
+            offset = span.end.column;
+        }
+        acc.push(rest);
+    }
     Ok(())
 }
 
@@ -70,6 +96,7 @@ where
 
     acc.push_line("{");
     acc.append(s);
+    acc.push_line("");
     acc.push("}");
     Ok(())
 }

@@ -21,6 +21,8 @@ enum Opt {
         remove_test_modules: bool,
         #[structopt(long, help = "Remove doc comments")]
         remove_doc_comments: bool,
+        #[structopt(long, help = "Remove comments")]
+        remove_comments: bool,
         #[structopt(
             short = "e",
             long,
@@ -45,6 +47,7 @@ fn main() -> Result<()> {
         manifest_path,
         remove_test_modules,
         remove_doc_comments,
+        remove_comments,
         entry_file_path,
         indent_spaces,
     } = Opt::from_args();
@@ -73,6 +76,7 @@ fn main() -> Result<()> {
             entry_file_path,
             remove_test_modules,
             remove_doc_comments,
+            remove_comments,
             indent_spaces: indent_spaces.unwrap_or(0),
         }
     };

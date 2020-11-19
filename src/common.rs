@@ -7,7 +7,7 @@ use std::{
 use string_interner::StringInterner;
 
 pub use anyhow::Result;
-pub use itertools::Itertools as _;
+pub use itertools::{Itertools as _, PeekingNext as _};
 pub use string_interner::DefaultSymbol as Symbol;
 
 impl fmt::Debug for WithContext<'_, '_, Symbol> {

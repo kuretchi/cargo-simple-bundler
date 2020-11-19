@@ -63,6 +63,7 @@ dependencies = [
  "itertools",
  "log",
  "proc-macro2",
+ "quote",
  "smallvec",
  "string-interner",
  "structopt",

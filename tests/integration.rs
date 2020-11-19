@@ -15,6 +15,7 @@ fn actual_output(remove_doc_comments: bool, remove_test_modules: bool) -> String
         entry_file_path: Some(Path::new(MANIFEST_DIR).join("tests/fixtures/entry_file.rs")),
         remove_doc_comments,
         remove_test_modules,
+        remove_comments: false,
         indent_spaces: 4,
     };
     let mut buf = vec![];

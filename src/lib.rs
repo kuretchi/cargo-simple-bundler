@@ -23,6 +23,7 @@ pub struct Config {
     pub entry_file_path: Option<PathBuf>,
     pub remove_test_modules: bool,
     pub remove_doc_comments: bool,
+    pub remove_comments: bool,
     pub indent_spaces: usize,
 }
 
