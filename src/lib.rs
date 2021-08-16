@@ -13,7 +13,6 @@ use crate::{
     deps::{entry_deps, Deps},
     resolve::resolve_deps,
 };
-use anyhow::Result;
 use std::{fs, io::Write, path::PathBuf};
 
 #[derive(Clone, Debug)]
