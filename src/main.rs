@@ -72,7 +72,7 @@ fn main() -> Result<()> {
 
         Config {
             crate_ident: package.name.replace('-', "_"),
-            crate_src_dir: target.src_path.parent().unwrap().to_owned(),
+            crate_src_dir: target.src_path.parent().unwrap().to_owned().into(),
             entry_file_path,
             remove_test_modules,
             remove_doc_comments,

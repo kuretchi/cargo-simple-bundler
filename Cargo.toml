@@ -9,15 +9,15 @@ repository = "https://github.com/kuretchi/cargo-simple-bundler"
 readme = "README.md"
 
 [dependencies]
-anyhow = "1.0.33"
-cargo_metadata = "0.12.0"
-env_logger = "0.8.1"
-itertools = "0.9.0"
-log = "0.4.11"
+anyhow = "1.0.42"
+cargo_metadata = "0.14.0"
+env_logger = "0.9.0"
+itertools = "0.10.1"
+log = "0.4.14"
 # see https://github.com/alexcrichton/proc-macro2/issues/242
 proc-macro2 = { version = "=1.0.13", features = ["span-locations"] }
 quote = "1.0.7"
-smallvec = "1.4.2"
-string-interner = "0.12.0"
-structopt = "0.3.20"
+smallvec = "1.6.1"
+string-interner = "0.12.2"
+structopt = "0.3.22"
 syn = { version = "1.0.41", features = ["full", "visit", "extra-traits"] }
